@@ -1,0 +1,8 @@
+{
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
+    "python.analysis.extraPaths": [
+        "E:\\code\\PerspectiveFields",
+        "E:\\code\\sam3",
+        "E:\\code\\MoGe"
+    ]
+}

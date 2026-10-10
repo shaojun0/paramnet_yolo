@@ -1,0 +1,30 @@
+[project]
+name = "paramnet-yolo"
+version = "0.1.0"
+description = "氧气瓶倒伏检测:YOLO 检测 + ParamNet 重力方向"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "torch>=2.5.1",
+    "torchvision>=0.20.1",
+    "ultralytics>=8.3",
+    "numpy>=1.26,<2",
+    "imageio",
+    "perspective2d",
+    "sam3",
+    "setuptools>=84.0.0",
+    "einops>=0.8.2",
+    "pycocotools>=2.0.11",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+torch = { path = 'D:\load\下载\torch-2.5.1+cu124-cp312-cp312-win_amd64.whl' }
+torchvision = { path = 'D:\load\下载\torchvision-0.20.1+cu124-cp312-cp312-win_amd64.whl' }
+perspective2d = { path = 'E:\code\PerspectiveFields', editable = true }
+sam3 = { path = "E:/code/sam3", editable = true }
+
+[[tool.uv.index]]
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true
