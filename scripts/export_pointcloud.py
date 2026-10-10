@@ -52,8 +52,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 const B64 = "__POINT_B64__";
 const N = __N_POINTS__, PT_SIZE = __PT_SIZE__;
 const CENTER = __CENTER__, CAM_DIST = __CAM_DIST__;
-const G0 = __G0__, G1 = __G1__, G2 = __G2__;
-const A0 = __A0__, A1 = __A1__, A2 = __A2__;
+const BC = __BC__;      // 瓶身质心
+const GRA = __GRA__;    // 重力箭头端点
+const E0 = __E0__, E1 = __E1__;  // 轴向两端(取瓶身点分布分位点)
 const QUAD = __QUAD__;  // 4x3 地面平面角点
 
 const raw = atob(B64);
@@ -81,9 +82,8 @@ const mkLine = (p, q, hex) => {
   scene.add(new THREE.Line(g, new THREE.LineBasicMaterial({color: hex})));
 };
 const c = CENTER;
-mkLine(c, [c[0] + G0 * CAM_DIST, c[1] + G1 * CAM_DIST, c[2] + G2 * CAM_DIST], 0x00ff44);
-mkLine([c[0] - A0 * CAM_DIST, c[1] - A1 * CAM_DIST, c[2] - A2 * CAM_DIST],
-       [c[0] + A0 * CAM_DIST, c[1] + A1 * CAM_DIST, c[2] + A2 * CAM_DIST], 0xffa500);
+mkLine(BC, GRA, 0x00ff44);
+mkLine(E0, E1, 0xffa500);
 if (QUAD.length === 12) {
   const gq = new THREE.BufferGeometry().setFromPoints(QUAD.map(q => new THREE.Vector3(...q)));
   scene.add(new THREE.Mesh(gq, new THREE.MeshBasicMaterial({
@@ -208,16 +208,16 @@ def main():
         g_flip = np.array([g[0], -g[1], -g[2]])
         if bottle_sub.sum() > 50:
             bp = v_sub[bottle_sub]
-            c3 = bp.mean(axis=0)
-            _, _, vt = np.linalg.svd(bp - c3, full_matrices=False)
-            a = vt[0] * abs(med_z) * 0.35  # 方向指示线:固定场景相对长度,抗 mask 离群点
-            c3 = c3 * 1.0
+            bc = bp.mean(axis=0)
+            _, _, vt = np.linalg.svd(bp - bc, full_matrices=False)
+            t = (bp - bc) @ vt[0]
+            t0, t1 = np.percentile(t, [2.0, 98.0])
+            e0, e1 = bc + vt[0] * t0, bc + vt[0] * t1
         else:
-            a = np.array([cam_dist * 0.3, 0.0, 0.0])
-            c3 = center
-        else:
-            a = np.array([cam_dist * 0.3, 0.0, 0.0])
-            c3 = center
+            bc = center
+            e0 = center - np.array([cam_dist * 0.3, 0.0, 0.0])
+            e1 = center + np.array([cam_dist * 0.3, 0.0, 0.0])
+        gra = bc + g_flip * abs(med_z) * 0.35
 
         # 地面平面四角(以画面下部点质心为心,跨度约 2 倍中位深度)
         h, w = valid.shape
@@ -244,12 +244,17 @@ def main():
                 .replace("__PT_SIZE__", f"{max(abs(med_z) * 0.004, 0.002):.4f}")
                 .replace("__CENTER__", repr([round(x, 4) for x in center]))
                 .replace("__CAM_DIST__", f"{cam_dist:.4f}")
-                .replace("__G0__", f"{g_flip[0]:.4f}").replace("__G1__", f"{g_flip[1]:.4f}")
-                .replace("__G2__", f"{g_flip[2]:.4f}")
-                .replace("__A0__", f"{a[0]:.4f}").replace("__A1__", f"{a[1]:.4f}")
-                .replace("__A2__", f"{a[2]:.4f}")
+                .replace("__BC__", repr([round(x, 4) for x in bc]))
+                .replace("__GRA__", repr([round(x, 4) for x in gra]))
+                .replace("__E0__", repr([round(x, 4) for x in e0]))
+                .replace("__E1__", repr([round(x, 4) for x in e1]))
                 .replace("__QUAD__", repr([[round(x, 3) for x in q] for q in quad])))
         html_path = out_dir / f"{name}.html"
         html_path.write_text(html, encoding="utf-8")
 
-        print(f"{name}: PLY {n_all // 1000}k 点 -> {pl
+        print(f"{name}: PLY {n_all // 1000}k 点 -> {ply_path}")
+        print(f"{name}: HTML {len(v_sub) // 1000}k 点 -> {html_path}")
+
+
+if __name__ == "__main__":
+    main()
